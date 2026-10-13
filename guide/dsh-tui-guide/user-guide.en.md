@@ -133,7 +133,7 @@ While a turn is running, the `/` overlay groups commands by their impact on the 
 | `Ctrl+←` / `Ctrl+→` (⌘←/→) | jump by word |
 | `Home` / `End`, `Ctrl+E` | logical line start / end (`Ctrl+A` now opens the subagent panel, see §2.7) |
 | `Ctrl+U` / `Ctrl+K` | delete before the cursor (to line start) / after the cursor (to line end) |
-| `Ctrl+W` | delete the previous word |
+| `Ctrl+W` / `Alt+Backspace` (⌥⌫) | delete the previous word |
 | `Ctrl+Z` | undo the draft's last word-level edit (caret and images included); draft-only — a submit or a history recall (`Ctrl+R`/`↑`) ends it, and it is unrelated to the `Esc Esc` conversation/message rewind; remappable via `/settings` |
 | `Backspace` / `Delete` | delete previous / next character; **with a selection, delete the whole selection** |
 | `↑` / `↓` | move between lines when multi-line; browse input history when single-line (scoped per project, last 200 entries each, kept across restarts; history from before the upgrade shows in every project) |

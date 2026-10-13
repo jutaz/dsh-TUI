@@ -66,7 +66,7 @@ import type { CommandCompletion } from '../src/commands.js'
 const { Terminal: XTerm } = xterm
 const [
   { render, ThemeProvider, AlternateScreen, Text, Box },
-  { Launchpad, fitChips, prevBoundary, nextBoundary },
+  { Launchpad, fitChips, prevBoundary, nextBoundary, wordStartBefore, wordEndAfter },
   { resolveLaunchpadLayout },
   { resolveLaunchpadActions, truncateContinueTitle, LAUNCHPAD_CONTINUE_TITLE_MAX },
   { fitParamParts, PARAM_SEPARATOR, PARAM_SEGMENT_MIN_WIDTH, PARAM_UNTRUNCABLE_SEGMENT },
@@ -761,6 +761,35 @@ for (const brand of ['claude', 'codex'] as const) {
     last(ev2, 'query')?.value === 'b', JSON.stringify(last(ev2, 'query')))
   s.close()
   s2.close()
+}
+{
+  // Option/Cmd/Ctrl+←/→ 按词跳、Option+⌫ 按词删（Orca 与 Option-as-Meta 终端的
+  // 全部编码：kitty CSI 1;3D/C、旧式 ESC b/f、ESC DEL、kitty CSI 127;3u）。
+  const ev: Ev[] = []
+  const s = await openLaunchpad(ev, { query: 'aaa bbb ccc' })
+  await s.send('\u001b[1;3D')
+  check('B11a Option+← (CSI 1;3D) 跳到词首', last(ev, 'query')?.cursor === 8, JSON.stringify(last(ev, 'query')))
+  await s.send('\u001bb')
+  check('B11b Option+← (ESC b) 再跳一个词', last(ev, 'query')?.cursor === 4, JSON.stringify(last(ev, 'query')))
+  await s.send('\u001b[1;5D')
+  check('B11c Ctrl+← (CSI 1;5D) 按词跳', last(ev, 'query')?.cursor === 0, JSON.stringify(last(ev, 'query')))
+  await s.send('\u001bf')
+  check('B11d Option+→ (ESC f) 跳过一个词及其后空白', last(ev, 'query')?.cursor === 4, JSON.stringify(last(ev, 'query')))
+  await s.send('\u001b[1;3C')
+  check('B11e Option+→ (CSI 1;3C) 再跳一个词', last(ev, 'query')?.cursor === 8, JSON.stringify(last(ev, 'query')))
+  await s.send('\u001b\u007f')
+  check('B11f Option+⌫ (ESC DEL) 删掉前一个词', last(ev, 'query')?.value === 'aaa ccc' && last(ev, 'query')?.cursor === 4,
+    JSON.stringify(last(ev, 'query')))
+  await s.send('\u001b[127;3u')
+  check('B11g Option+⌫ (CSI 127;3u) 再删一个词', last(ev, 'query')?.value === 'ccc' && last(ev, 'query')?.cursor === 0,
+    JSON.stringify(last(ev, 'query')))
+  s.close()
+}
+{
+  // 词边界与聊天输入框 wordBoundaryLeft/Right 同规则（导出契约）。
+  check('B11h 词边界：wordStartBefore / wordEndAfter',
+    wordStartBefore('aaa  bbb', 8) === 5 && wordStartBefore('aaa  bbb', 5) === 0
+      && wordEndAfter('aaa  bbb', 0) === 5 && wordEndAfter('aaa  bbb', 5) === 8)
 }
 
 // ── B12+ 粘贴 ──

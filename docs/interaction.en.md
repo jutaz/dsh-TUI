@@ -162,7 +162,7 @@ results back to the chat screen and add no new behavior.
 | `Ctrl+A` / `Ctrl+E` | `Ctrl+A` opens the subagent dashboard (`Mod+A` in the editor still moves to line start); `Ctrl+E` moves to line end and also expands or folds hidden older rows in long transcripts |
 | `Ctrl+U` | Delete before the caret |
 | `Ctrl+K` | Delete after the caret |
-| `Ctrl+W` | Delete the preceding word |
+| `Ctrl+W` / `Alt+Backspace` (⌥⌫) | Delete the preceding word |
 | `Backspace` / `Delete` | Delete the character before / after the caret; **with a selection, delete the whole selection** |
 | Typing | **Replaces an active selection** (standard editor semantics), caret after the inserted text |
 

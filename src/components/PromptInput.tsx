@@ -2986,15 +2986,17 @@ export function PromptInput({
       }
       return
     }
-    if (isMod(key) && key.leftArrow) {
+    if ((isMod(key) || key.meta) && key.leftArrow) {
       // Jump to the previous word boundary (readline alt+b). Must precede the
-      // bare-arrow arms: Ctrl+Left arrives as leftArrow + ctrl. An active
-      // selection collapses to its START edge first (editor semantics).
+      // bare-arrow arms: Ctrl+Left arrives as leftArrow + ctrl, Option+Left
+      // as leftArrow + meta (CSI 1;3D, or ESC b from Option-as-Meta and
+      // Orca's legacy rewrite). An active selection collapses to its START
+      // edge first (editor semantics).
       const sel = selectionRef.current
       setInput(value, sel ? sel.start : wordBoundaryLeft(value, cursor))
       return
     }
-    if (isMod(key) && key.rightArrow) {
+    if ((isMod(key) || key.meta) && key.rightArrow) {
       // Jump to the next word boundary (readline alt+f).
       const sel = selectionRef.current
       setInput(value, sel ? sel.end : wordBoundaryRight(value, cursor))
@@ -3019,6 +3021,12 @@ export function PromptInput({
     if (key.rightArrow) {
       const sel = selectionRef.current
       setInput(value, sel ? sel.end : nextGraphemeBoundary(bounds, cursor))
+      return
+    }
+    if (key.backspace && key.meta) {
+      // Option/Alt+Backspace: delete the previous word (readline
+      // backward-kill-word), same span as Ctrl+W.
+      deleteInputRange(clampRowStart(wordBoundaryLeft(value, cursor)), cursor)
       return
     }
     if (key.backspace) {

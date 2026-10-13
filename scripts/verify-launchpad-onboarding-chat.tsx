@@ -1802,6 +1802,10 @@ const AC4_CUT_PRESET = 'Standard (Git Bash'
         await chat.send('\x17')
         check(`Z25[${mode}] Ctrl+W 不拆开图片 token`,
           await settled(() => !chat.screen().includes('Image #') && fixture.staged.size === 0 && fixture.discarded.length === 3), chat.screen())
+        await paste()
+        await chat.send('\x1b\x7f')
+        check(`Z25b[${mode}] Option+Backspace 同 Ctrl+W 整体删除图片 token`,
+          await settled(() => !chat.screen().includes('Image #') && fixture.staged.size === 0 && fixture.discarded.length === 4), chat.screen())
         await chat.type('[Image #9]')
         await chat.send('\x7f')
         check(`Z26[${mode}] 没有附件绑定的字面 token 仍逐字编辑`,

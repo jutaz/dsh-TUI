@@ -171,6 +171,20 @@ check('text + Ctrl+C + text keeps order', new Feeder().feed('ab\x03d'), [
   named('c', '\x03', { ctrl: true }),
   char('d'),
 ])
+check('ESC DEL is meta+backspace (Option+Backspace)', new Feeder().feed('\x1b\x7f'), [
+  named('backspace', '\x1b\x7f', { meta: true }),
+])
+check('text + ESC DEL + text keeps order', new Feeder().feed('ab\x1b\x7fc'), [
+  text('ab'),
+  named('backspace', '\x1b\x7f', { meta: true }),
+  char('c'),
+])
+check('ESC BS is meta+backspace', new Feeder().feed('\x1b\b'), [
+  named('backspace', '\x1b\b', { meta: true }),
+])
+check('CSI 127;3u is meta+backspace', new Feeder().feed('\x1b[127;3u'), [
+  named('backspace', '\x1b[127;3u', { meta: true }),
+])
 check('mixed CR stays a piped-line text token', new Feeder().feed('ab\rc'), [
   text('ab\rc'),
 ])
@@ -185,6 +199,14 @@ check('bracketed paste preserves embedded controls', new Feeder().feed('\x1b[200
   check('lone ESC buffers (no keys yet)', f.feed('\x1b'), [])
   check('CR+text completing a buffered ESC splits correctly', f.feed('\rabc'), [
     ret({ meta: true }, '\x1b\r'),
+    text('abc'),
+  ])
+}
+{
+  const f = new Feeder()
+  check('lone ESC buffers before a split ESC DEL', f.feed('\x1b'), [])
+  check('DEL+text completing a buffered ESC is meta+backspace', f.feed('\x7fabc'), [
+    named('backspace', '\x1b\x7f', { meta: true }),
     text('abc'),
   ])
 }

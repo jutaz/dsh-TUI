@@ -1034,11 +1034,21 @@ export function Launchpad({
     if (key.leftArrow || key.rightArrow || key.home || key.end) {
       if (!inputFocused) return
       const at = caret
+      // Ctrl/Cmd/Option+←/→ jump by word, like the chat composer.
+      const byWord = isMod(key) || key.meta
       const next = key.home ? 0
         : key.end ? query.length
-          : key.leftArrow ? Math.max(0, prevBoundary(query, at))
-            : Math.min(query.length, nextBoundary(query, at))
+          : key.leftArrow ? (byWord ? wordStartBefore(query, at) : Math.max(0, prevBoundary(query, at)))
+            : (byWord ? wordEndAfter(query, at) : Math.min(query.length, nextBoundary(query, at)))
       changeQuery(query, next)
+      event.stopImmediatePropagation()
+      return
+    }
+    // Option/Alt+Backspace kills a word like Ctrl+W; checked before the
+    // plain Backspace arm, which would otherwise eat it as one character.
+    if ((isMod(key) && input === 'w') || (key.backspace && key.meta)) {
+      if (!inputFocused) return
+      deleteRange(wordStartBefore(query, caret), caret)
       event.stopImmediatePropagation()
       return
     }
@@ -1052,15 +1062,6 @@ export function Launchpad({
         if (at >= query.length) return
         deleteRange(at, nextBoundary(query, at))
       }
-      event.stopImmediatePropagation()
-      return
-    }
-    if (isMod(key) && input === 'w') {
-      if (!inputFocused) return
-      let start = caret
-      while (start > 0 && /\s/u.test(query[start - 1]!)) start--
-      while (start > 0 && !/\s/u.test(query[start - 1]!)) start--
-      deleteRange(start, caret)
       event.stopImmediatePropagation()
       return
     }
@@ -1381,6 +1382,34 @@ export function nextBoundary(text: string, at: number): number {
   const rest = Array.from(text.slice(at))
   const first = rest[0] ?? ''
   return at + first.length
+}
+
+/**
+ * 光标左侧的词首（readline alt+b / Ctrl+W 的删除起点）：先跳过空白，再跳过
+ * 非空白。与聊天输入框 `wordBoundaryLeft` 同规则，按空白分词。
+ * @param text - 全文。
+ * @param at - 当前 UTF-16 偏移。
+ * @returns 词首偏移。
+ */
+export function wordStartBefore(text: string, at: number): number {
+  let index = at
+  while (index > 0 && /\s/u.test(text[index - 1]!)) index--
+  while (index > 0 && !/\s/u.test(text[index - 1]!)) index--
+  return index
+}
+
+/**
+ * 光标右侧的下一个词边界（readline alt+f）：跳过当前词，再跳过其后空白。
+ * 与聊天输入框 `wordBoundaryRight` 同规则。
+ * @param text - 全文。
+ * @param at - 当前 UTF-16 偏移。
+ * @returns 边界偏移。
+ */
+export function wordEndAfter(text: string, at: number): number {
+  let index = at
+  while (index < text.length && !/\s/u.test(text[index]!)) index++
+  while (index < text.length && /\s/u.test(text[index]!)) index++
+  return index
 }
 
 /** 最小模式这一屏整体不存在（与 `LogoHeader` 同规则）：直接进会话。 */

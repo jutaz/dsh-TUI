@@ -206,13 +206,21 @@ function tokenize(
           // Two-character escape sequence
           i++
           emitSequence(data.slice(seqStart, i))
-        } else if (code === C0.CR || code === C0.LF) {
+        } else if (
+          code === C0.CR ||
+          code === C0.LF ||
+          code === C0.DEL ||
+          code === C0.BS
+        ) {
           // Meta+Enter: ESC CR / ESC LF is how Option+Enter arrives from
           // terminals without extended key reporting ("Use Option as Meta").
           // CR/LF aren't ESC final bytes, but emitting the pair as a
           // sequence lets the keypress parser recognize it — otherwise it
           // merges with following text ('\x1b\rabc') and the CR submits
           // the prompt instead of inserting a newline (#110).
+          // Meta+Backspace (ESC DEL / ESC BS) has the same shape: split, the
+          // ESC surfaces as a bare Escape key (clearing the draft or
+          // interrupting a turn) followed by a one-char Backspace.
           i++
           emitSequence(data.slice(seqStart, i))
         } else if (code === C0.ESC) {

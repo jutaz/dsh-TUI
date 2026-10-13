@@ -25,6 +25,9 @@
  * char and the markers land in different places, so the submitted value
  * differs. A word-jump-on-bare-arrow regression likewise moves marker Z.
  *
+ * Then Option+Backspace (ESC DEL / CSI 127;3u) must delete a whole word,
+ * not one character.
+ *
  * Plus a static invariant (verify-cordis-approval style): in the source the
  * isMod arrow arms must textually precede the bare arrow arms.
  *
@@ -129,13 +132,51 @@ check(
   JSON.stringify(submitted),
 )
 
+// Option+Backspace deletes the previous word (readline backward-kill-word),
+// in both encodings: legacy ESC DEL (macOS terminals with Option-as-Meta,
+// Orca) and kitty CSI 127;3u. A meta-blind backspace arm drops one char each.
+await feed('foo bar baz')
+await feed('\x1b\x7f')       // → "foo bar "
+await feed('\x1b[127;3u')    // → "foo "
+await feed('Q')
+stdin.write('\r')
+
+check(
+  'Option+Backspace (ESC DEL and CSI 127;3u) deletes the previous word',
+  await settled(() => submitted.length === 2 && submitted[1] === 'foo Q'),
+  JSON.stringify(submitted),
+)
+
+// Option+←/→ is word jump on macOS, in the encodings Orca sends: kitty
+// CSI 1;3D/C (desktop with the push) and legacy ESC b / ESC f (Orca's
+// rewrite without kitty, Orca iOS, iTerm "natural text editing"). The
+// meta-blind bare-arrow arm moved one char.
+await feed('aaa bbb ccc')       // caret 11
+await feed('\x1b[1;3D')         // → 8 (start of "ccc")
+await feed('X')                 // "aaa bbb Xccc", caret 9
+await feed('\x1bb')             // → 8
+await feed('\x1bb')             // → 4 (start of "bbb")
+await feed('Y')                 // "aaa Ybbb Xccc", caret 5
+await feed('\x1b[1;3C')         // → 9 (past "bbb" and its space)
+await feed('Z')                 // "aaa Ybbb ZXccc", caret 10
+await feed('\x1bb')             // → 9
+await feed('\x1bf')             // → 14 (end)
+await feed('Q')
+stdin.write('\r')
+
+check(
+  'Option+←/→ (CSI 1;3D/C, ESC b/f) jump by word',
+  await settled(() => submitted.length === 3 && submitted[2] === 'aaa Ybbb ZXcccQ'),
+  JSON.stringify(submitted),
+)
+
 instance.unmount()
 
 // ── static invariant: isMod arrow arms precede bare arrow arms ─────────────
 const source = readFileSync(join(root, 'src/components/PromptInput.tsx'), 'utf8')
-const modLeft = source.indexOf('if (isMod(key) && key.leftArrow)')
+const modLeft = source.indexOf('if ((isMod(key) || key.meta) && key.leftArrow)')
 const bareLeft = source.indexOf('if (key.leftArrow)')
-const modRight = source.indexOf('if (isMod(key) && key.rightArrow)')
+const modRight = source.indexOf('if ((isMod(key) || key.meta) && key.rightArrow)')
 const bareRight = source.indexOf('if (key.rightArrow)')
 check('source: isMod+left arm exists and precedes bare left arm', modLeft !== -1 && bareLeft !== -1 && modLeft < bareLeft)
 check('source: isMod+right arm exists and precedes bare right arm', modRight !== -1 && bareRight !== -1 && modRight < bareRight)

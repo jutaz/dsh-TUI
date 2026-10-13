@@ -3,7 +3,7 @@
  * the composer.
  *
  * The caret never rests inside a staged token: ←/→ step over it, Backspace
- * at its end / Delete at its start / Ctrl+W remove it whole, a selection
+ * at its end / Delete at its start / Ctrl+W / Option+Backspace remove it whole, a selection
  * edge inside it grows to cover it, and a click puts the caret at its
  * start. It renders as a chip in the theme accent and inverts whole when
  * the caret sits at its start (the selected-chip look). A raw token typed
@@ -211,6 +211,7 @@ const END = '\x1b[F'
 const BACKSPACE = '\x7f'
 const DELETE = '\x1b[3~'
 const CTRL_W = '\x17'
+const OPTION_BACKSPACE = '\x1b\x7f'
 const cellAt = (col: number, row: number) => terminal.buffer.active.getLine(row)?.getCell(col)
 const inverseAt = (col: number, row: number): boolean => (cellAt(col, row)?.isInverse() ?? 0) !== 0
 const caretAt = (col: number, row: number): boolean => terminal.buffer.active.cursorX === col && terminal.buffer.active.cursorY === row
@@ -287,6 +288,13 @@ const t3 = await paste()
 stdin.write(CTRL_W)
 check('delete: Ctrl+W after the token removes the whole token, not just the text after its space',
   await settled(() => !text().includes(t3) && noTokenFragment() && draftIs(/❯ a +b/u)), text())
+
+// Option+Backspace (ESC DEL) shares Ctrl+W's word span, so it must take the
+// token whole too — and must not surface as a bare Escape that clears the draft.
+const t3b = await paste()
+stdin.write(OPTION_BACKSPACE)
+check('delete: Option+Backspace after the token removes the whole token and keeps the draft',
+  await settled(() => !text().includes(t3b) && noTokenFragment() && draftIs(/❯ a +b/u)), text())
 
 // Selection: click before "a", then Shift+click inside the token — the
 // selection grows to the token's end and Backspace removes it whole.
