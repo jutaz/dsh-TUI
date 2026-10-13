@@ -606,7 +606,8 @@ provider / model / cwd / preset / workspace / sessionId / modes，
 ### 5.4 终端要求
 
 - 必须交互 TTY；推荐 Windows Terminal（≥110 列、等宽、TrueColor）。
-- macOS 的 ⌘ 修饰键需要扩展键盘协议（iTerm2 / kitty / WezTerm / ghostty / tmux）。
+- macOS 的 ⌘ 修饰键需要扩展键盘协议（iTerm2 / kitty / WezTerm / ghostty / Orca / tmux）；与 dsh-tui 跑在哪台机器无关，Mac 键盘经 Orca 无头运行时或 ssh 驱动 Linux 上的 dsh-tui 同样可用。
+- Orca 中，Orca 自己的 ⌘ 快捷键（`⌘K`、`⌘W`、`⌘T`、`⌘L` 等）优先，除非其 Settings → Shortcuts 设为「Terminal first」；`⌘⌫` / `⌘←` / `⌘→` 由 Orca 自行转成删到行首 / 行首 / 行尾。
 - Terminal.app 用 Ctrl。
 - VS Code：装 companion 扩展 `dsh-tui-vscode`（拿到 **IDE 选区通道**，需 ≥ 0.7.0）。
 - 或直接在集成终端运行 `dsh-tui`。

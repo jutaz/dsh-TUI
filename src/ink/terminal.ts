@@ -1,7 +1,6 @@
 import coerce from 'semver/functions/coerce.js'
 import type { Writable } from 'stream'
 import { appendFileSync } from 'node:fs'
-import { env } from '../utils/env.js'
 import { gte } from '../utils/semver.js'
 import { getClearTerminalSequence } from './clearTerminal.js'
 import type { Diff } from './frame.js'
@@ -265,10 +264,15 @@ export function supportsDecrqmProbe(): boolean {
 // in xterm.js-based terminals like VS Code). tmux is allowlisted because it
 // accepts modifyOtherKeys and doesn't forward the kitty sequence to the outer
 // terminal.
-// env.terminal is lowercased (utils/env.ts) and falls back to TERM when
+// Matched lowercased against TERM_PROGRAM, falling back to TERM when
 // TERM_PROGRAM is unset — kitty doesn't set TERM_PROGRAM, so its TERM
 // (xterm-kitty) is listed too. Warp sets TERM_PROGRAM=WarpTerminal and
-// implements the kitty keyboard protocol (issue #110).
+// implements the kitty keyboard protocol (issue #110). Orca is xterm.js, but
+// unlike the VS Code family it turns xterm.js's kitty keyboard support on
+// for every pane, and it is the only way Cmd+<letter> reaches the app there
+// (xterm.js has no modifyOtherKeys and sends nothing for Cmd without kitty).
+// It is matched by TERM_PROGRAM, never by the `xterm.js(<ver>)` XTVERSION
+// reply, which VS Code shares.
 const EXTENDED_KEYS_TERMINALS = [
   'iterm.app',
   'kitty',
@@ -278,6 +282,7 @@ const EXTENDED_KEYS_TERMINALS = [
   'tmux',
   'warpterminal',
   'windows-terminal',
+  'orca',
 ]
 
 /**
@@ -292,7 +297,8 @@ const EXTENDED_KEYS_TERMINALS = [
  */
 export function supportsExtendedKeys(): boolean {
   if (process.env.WT_SESSION) return true
-  return EXTENDED_KEYS_TERMINALS.includes(env.terminal ?? '')
+  const terminal = (process.env.TERM_PROGRAM ?? process.env.TERM ?? '').toLowerCase()
+  return EXTENDED_KEYS_TERMINALS.includes(terminal)
 }
 
 /**

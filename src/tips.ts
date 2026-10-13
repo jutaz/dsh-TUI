@@ -855,8 +855,8 @@ export const TIPS: readonly Tip[] = [
   {
     id: 'pit-mac',
     group: 'pitfalls',
-    zh: 'macOS ⌘ 键需 iTerm2/kitty/WezTerm/ghostty/tmux',
-    en: 'macOS ⌘ needs iTerm2, kitty, WezTerm, ghostty, or tmux',
+    zh: 'macOS ⌘ 键需 iTerm2/kitty/WezTerm/ghostty/Orca/tmux',
+    en: 'macOS ⌘ needs iTerm2, kitty, WezTerm, ghostty, Orca, or tmux',
   },
   {
     id: 'pit-thinking',

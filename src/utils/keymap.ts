@@ -11,14 +11,14 @@
  * `Chat.tsx` / `PromptInput.tsx` match keypresses against the EFFECTIVE
  * combos via {@link actionMatches} — never against a hardcoded string.
  *
- * The macOS modifier alias mirrors `isMod`: a combo spelled with `ctrl`
- * matches Cmd (`super`) on the mac too, so `ctrl+v` keeps meaning "paste
- * with the platform primary modifier" everywhere. `alt` always means the
+ * The primary-modifier alias mirrors `isMod`: a combo spelled with `ctrl`
+ * also matches Cmd (`super`), so `ctrl+v` keeps meaning "paste with the
+ * primary modifier" everywhere. `alt` always means the
  * ink `meta` flag. Shift must match exactly (ctrl+shift+v is the terminal's
  * native paste, never the app's clipboard read).
  */
 
-import { isMac } from './modifiers.js'
+import { primaryAcceptsSuper } from './modifiers.js'
 
 /** Minimal structural shape of the ink Key flags the matchers read. */
 export interface ComboKeyFlags {
@@ -153,14 +153,14 @@ export function comboMatchesStrict(combo: ParsedCombo, input: string, key: Combo
 }
 
 /**
- * Built-in matcher with the platform primary-modifier alias: `ctrl` combos
- * also accept Cmd (`super`) on macOS (isMod semantics), `alt` maps to the
- * ink `meta` flag. Shift stays exact — ctrl+shift+v must keep meaning the
- * terminal's native paste, never the app's clipboard read.
+ * Built-in matcher with the primary-modifier alias: `ctrl` combos also
+ * accept Cmd (`super`) (isMod semantics), `alt` maps to the ink `meta`
+ * flag. Shift stays exact — ctrl+shift+v must keep meaning the terminal's
+ * native paste, never the app's clipboard read.
  *
  * `exactPrimary` actions opt out of the ctrl↔Cmd alias: word-level draft
  * undo must not fire on Cmd+Z, which macOS owns for its own conventions.
- * `platformAlias` is injectable so a Linux CI can assert BOTH polarities
+ * `platformAlias` is injectable so CI can assert BOTH polarities
  * (`super+v` still pastes, `super+z` never undoes).
  */
 function comboMatchesBuiltin(
@@ -168,7 +168,7 @@ function comboMatchesBuiltin(
   input: string,
   key: ComboKeyFlags,
   exactPrimary = false,
-  platformAlias: boolean = isMac,
+  platformAlias: boolean = primaryAcceptsSuper,
 ): boolean {
   const alias = platformAlias && !exactPrimary
   const primary = key.ctrl === true || (alias && key.super === true)
@@ -337,7 +337,7 @@ export function actionMatches(
   action: ShortcutActionId,
   input: string,
   key: ComboKeyFlags,
-  platformAlias: boolean = isMac,
+  platformAlias: boolean = primaryAcceptsSuper,
 ): boolean {
   const combos = effectiveCombos(action)
   const exactPrimary = EXACT_PRIMARY_ACTIONS.has(action)

@@ -47,7 +47,8 @@ side panel (`Ctrl+B`/`Alt+Z`), subagent dashboard, show-all, and todo fold are r
 
 - The `Ctrl+<key>` bindings above also work with `⌘<key>` on macOS (e.g. `⌘V` paste, `⌘O` expand details, `⌘Enter` send immediately).
 - Only `Ctrl+C` / `Ctrl+D` (interrupt/exit) stay on Ctrl, to avoid clashing with muscle memory for macOS system-level `⌘C` copy and similar.
-- `⌘` requires terminal support for the extended keyboard protocol (iTerm2 / kitty / WezTerm / ghostty / tmux).
+- `⌘` requires terminal support for the extended keyboard protocol (iTerm2 / kitty / WezTerm / ghostty / Orca / tmux). It works whichever machine dsh-tui runs on, so a Mac keyboard driving dsh-tui on Linux (Orca's headless runtime, ssh) gets the same `⌘` bindings.
+- In Orca, Orca's own `⌘` shortcuts (`⌘K`, `⌘W`, `⌘T`, `⌘L`, …) win unless its Settings → Shortcuts policy is "Terminal first"; Orca also turns `⌘⌫` / `⌘←` / `⌘→` into line delete / line start / line end itself.
 - macOS's built-in Terminal.app consumes `⌘` shortcuts itself, so keep using `Ctrl`.
 
 `/` has two meanings:

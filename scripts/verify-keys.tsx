@@ -171,6 +171,18 @@ check('text + Ctrl+C + text keeps order', new Feeder().feed('ab\x03d'), [
   named('c', '\x03', { ctrl: true }),
   char('d'),
 ])
+// Kitty (flags=1) delivers Ctrl+letters as CSI-u, e.g. Orca's xterm.js; the
+// raw C0 byte still arrives from legacy clients (Orca iOS, `terminal send
+// --interrupt`) on the same pty. Both must be the same ctrl+c / ctrl+d key.
+check('CSI 99;5u is ctrl+c (kitty Ctrl+C)', new Feeder().feed('\x1b[99;5u'), [
+  named('c', '\x1b[99;5u', { ctrl: true }),
+])
+check('CSI 100;5u is ctrl+d (kitty Ctrl+D)', new Feeder().feed('\x1b[100;5u'), [
+  named('d', '\x1b[100;5u', { ctrl: true }),
+])
+check('CSI 111;9u is super+o (kitty Cmd+O)', new Feeder().feed('\x1b[111;9u'), [
+  named('o', '\x1b[111;9u', { super: true }),
+])
 check('mixed CR stays a piped-line text token', new Feeder().feed('ab\rc'), [
   text('ab\rc'),
 ])

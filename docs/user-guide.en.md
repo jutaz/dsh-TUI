@@ -664,7 +664,8 @@ plus the startup-level `effort` key.
 ### 5.4 Terminal requirements
 
 - Interactive TTY required; Windows Terminal recommended (≥110 columns, monospace, TrueColor).
-- macOS `⌘` modifier needs the extended keyboard protocol (iTerm2 / kitty / WezTerm / ghostty / tmux).
+- macOS `⌘` modifier needs the extended keyboard protocol (iTerm2 / kitty / WezTerm / ghostty / Orca / tmux); it works whichever machine dsh-tui runs on, so a Mac keyboard driving dsh-tui on Linux through Orca's headless runtime or ssh gets it too.
+- In Orca, Orca's own `⌘` shortcuts (`⌘K`, `⌘W`, `⌘T`, `⌘L`, …) win unless its Settings → Shortcuts policy is "Terminal first"; Orca turns `⌘⌫` / `⌘←` / `⌘→` into delete-to-line-start / line start / line end itself.
 - Terminal.app: use Ctrl.
 - VS Code: install the companion extension `dsh-tui-vscode` (gets the **IDE selection channel**, needs ≥ 0.7.0).
 - Or run `dsh-tui` directly in the integrated terminal.

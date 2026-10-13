@@ -320,6 +320,9 @@ const GROUPS = {
 // 终端能力探测回归：延迟 OSC/XTVERSION 回复期间保持 raw mode，
 // 回复只进 querier，不回显成终端残影。
     ["verify-terminal-queries", ['node', '--import', 'tsx/esm', 'scripts/verify-terminal-queries.tsx']],
+// kitty 键盘协议的主/备屏分栈：全屏挂载后备屏 flags=1、自愈重入保持、退出前
+// 先弹备屏栈（不把 flags 留给同窗格下一个备屏程序）、inline 弹出全屏视图。
+    ["verify-kitty-alt-screen", ['node', '--import', 'tsx/esm', 'scripts/verify-kitty-alt-screen.tsx']],
 // win32-input-mode 解析回归（issue #147）：Windows Shift+Enter 探针
 // 字节、AltGr 文本、Ctrl+[ 等价 Escape、spec 字段省略、数字键盘
 // Uc 优先、代理对与 keyup 交错、Rc 重复展开、conhost 拆散粘贴重组、

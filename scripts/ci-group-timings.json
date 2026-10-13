@@ -94,6 +94,7 @@
     "verify-exit-resume-marker": 2.7,
     "verify-hover-coalesce": 2.2,
     "verify-keys": 0.2,
+    "verify-kitty-alt-screen": 1.5,
     "verify-launcher": 2.7,
     "verify-mouse-report-fragments": 0.3,
     "verify-paste-drop": 0.2,

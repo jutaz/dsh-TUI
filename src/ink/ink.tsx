@@ -1427,6 +1427,14 @@ export default class Ink {
    */
   setAltScreenActive(active: boolean, mouseTracking = false): void {
     if (this.altScreenActive === active) return;
+    // Kitty keyboard flags are per screen: DECSET/DECRST 1049 swaps between
+    // separate main/alt flag stacks. <AlternateScreen> writes ?1049h BEFORE
+    // this call and ?1049l AFTER it, so re-push here for the screen just
+    // entered, and pop the alternate stack before it is left so no flags
+    // survive for the next alternate-screen app in the pane.
+    if (!this.isUnmounted) {
+      this.options.stdout.write(active ? this.kittyKeyboardReassert() : this.kittyKeyboardPop());
+    }
     const resetOldPointerContext = (): void => {
       // Fire leave handlers before dropping the set — a bare clear strands
       // old rows with hovered=true. resetPointerState also emits dragend for
@@ -1481,6 +1489,24 @@ export default class Ink {
   }
   get isAltScreenActive(): boolean {
     return this.altScreenActive;
+  }
+  /**
+   * True while App holds raw mode with the kitty keyboard stack pushed
+   * (extended-keys terminals, not win32-input-mode). Only then may a screen
+   * switch re-push or pop it: pushing without a raw-mode owner would leave
+   * CSI-u keys for the line discipline, and App's own enable/disable keep the
+   * depth at one.
+   */
+  private get kittyKeyboardPushed(): boolean {
+    return (this.app?.rawModeEnabledCount ?? 0) > 0 && !supportsWin32InputMode() && supportsExtendedKeys();
+  }
+  /** Pop-before-push re-assert for the active screen ('' when not pushed). */
+  private kittyKeyboardReassert(): string {
+    return this.kittyKeyboardPushed ? DISABLE_KITTY_KEYBOARD + ENABLE_KITTY_KEYBOARD : '';
+  }
+  /** Pop the active screen's kitty stack ('' when not pushed). */
+  private kittyKeyboardPop(): string {
+    return this.kittyKeyboardPushed ? DISABLE_KITTY_KEYBOARD : '';
   }
   /**
    * Read-only source of truth for "this host may receive SGR mouse reports":
@@ -2090,7 +2116,9 @@ export default class Ink {
     // the alt screen or re-enable mouse tracking past the exit cleanup
     // (issue #522).
     if (this.isUnmounted) return;
-    this.options.stdout.write(HIDE_CURSOR + ENTER_ALT_SCREEN + ERASE_SCREEN + CURSOR_HOME + (this.altScreenMouseTracking ? ENABLE_MOUSE_TRACKING : ''));
+    // ?1049h swaps kitty flags even when already in alt (xterm.js), which
+    // would silently drop the push — re-assert it on the alt stack.
+    this.options.stdout.write(HIDE_CURSOR + ENTER_ALT_SCREEN + this.kittyKeyboardReassert() + ERASE_SCREEN + CURSOR_HOME + (this.altScreenMouseTracking ? ENABLE_MOUSE_TRACKING : ''));
     this.resetFramesForAltScreen();
   }
 
@@ -2838,8 +2866,10 @@ export default class Ink {
       }
       if (this.altScreenActive) {
         // <AlternateScreen>'s unmount effect won't run during signal-exit.
-        // Exit alt screen FIRST so other cleanup sequences go to the main screen.
-        writeSync(stdoutFd, EXIT_ALT_SCREEN);
+        // Pop the alternate screen's kitty stack while it is still the active
+        // one (flags are per screen), then exit alt screen so the other cleanup
+        // sequences go to the main screen.
+        writeSync(stdoutFd, DISABLE_KITTY_KEYBOARD + EXIT_ALT_SCREEN);
       }
       // Disable mouse tracking — unconditional because altScreenActive can be
       // stale if AlternateScreen's unmount (which flips the flag) raced a

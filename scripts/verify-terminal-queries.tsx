@@ -26,7 +26,7 @@ import {
   type TerminalResponse,
 } from '../src/ink/parse-keypress.js'
 import { decrqm, oscColor, TerminalQuerier } from '../src/ink/terminal-querier.js'
-import { supportsDecrqmProbe } from '../src/ink/terminal.js'
+import { supportsDecrqmProbe, supportsExtendedKeys } from '../src/ink/terminal.js'
 import { settled, sleep } from './lib/term-test.mjs'
 
 class FakeStdout extends Writable {
@@ -233,6 +233,20 @@ for (const term of ['iTerm.app', 'ghostty', 'WezTerm', 'vscode']) {
   process.env.TERM_PROGRAM = term
   assert.equal(supportsDecrqmProbe(), true, `${term} must keep the DECRQM probe`)
 }
+
+// Extended keys (kitty push) allowlist. Orca's panes run xterm.js with the
+// kitty keyboard protocol on and identify as TERM_PROGRAM=Orca; without the
+// push xterm.js sends nothing for Cmd+<letter>. Plain xterm.js hosts (VS Code
+// family) stay off the list — only the TERM_PROGRAM decides, never the
+// shared `xterm.js(<ver>)` XTVERSION reply.
+const realTerm = process.env.TERM
+process.env.TERM = 'xterm-256color'
+for (const [term, expected] of [['Orca', true], ['ghostty', true], ['vscode', false]] as const) {
+  process.env.TERM_PROGRAM = term
+  assert.equal(supportsExtendedKeys(), expected, `${term} extended keys must be ${expected}`)
+}
+if (realTerm === undefined) delete process.env.TERM
+else process.env.TERM = realTerm
 
 // Unknown/unset terminals keep the spec-conforming probe: this is an
 // exclusion of one known-broken terminal, not an allowlist.

@@ -14,7 +14,7 @@ import { modLabel } from '../utils/modifiers.js'
  * Skill entries (user-invocable skills merged for `/` completion, issue
  * #86) are hidden — a skills directory can hold dozens of entries and the
  * menu is for chrome commands. Modifier labels always read ctrl+ (see
- * modLabel): Ctrl works in every terminal, ⌘ is only a macOS alias.
+ * modLabel): Ctrl works in every terminal, ⌘ is only an alias.
  */
 export function HelpMenu({
   commands,

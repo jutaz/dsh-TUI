@@ -2,20 +2,26 @@
  * Cross-platform modifier-key helpers. Windows/Linux muscle memory uses
  * Ctrl+<key>; on macOS the same action maps to Cmd+<key>. Terminals deliver
  * Cmd as the `super` flag (kitty CSI-u / xterm modifyOtherKeys); Ctrl keeps
- * working everywhere, so `isMod`
- * accepts either on the mac and stays Ctrl-only elsewhere.
+ * working everywhere, so `isMod` accepts either.
+ *
+ * The alias is not gated on the HOST platform: the keyboard belongs to the
+ * client terminal, not to the machine dsh-tui runs on. A Mac driving a Linux
+ * dsh-tui (Orca's headless runtime, ssh from iTerm2/Ghostty) sends Cmd as
+ * super just the same. Elsewhere super only arrives through the kitty
+ * protocol and desktop window managers usually grab the Super key first.
  */
 
-export const isMac = process.platform === 'darwin'
+/** Whether a Cmd (`super`) keypress counts as the primary modifier. */
+export const primaryAcceptsSuper = true
 
-/** True when the key event carries the platform's "primary" modifier. */
+/** True when the key event carries the "primary" modifier (Ctrl or Cmd). */
 export function isMod(key: { ctrl?: boolean; super?: boolean }): boolean {
-  return !!key.ctrl || (isMac && !!key.super)
+  return !!key.ctrl || (primaryAcceptsSuper && !!key.super)
 }
 
 /**
  * Display prefix for shortcut labels: "ctrl+" everywhere, e.g.
- * `${modLabel}o`. Cmd is only a macOS matching alias (see isMod); most
+ * `${modLabel}o`. Cmd is only a matching alias (see isMod); most
  * terminals never deliver it, so a ⌘ hint would be dead (#640).
  */
 export const modLabel = 'ctrl+'

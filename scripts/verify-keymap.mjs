@@ -9,7 +9,8 @@
  *   escape combos
  * - match: defaults still bind (ctrl+v paste, ctrl+g editor…), the alt+v
  *   paste alias matches meta+v, ctrl+shift+v does NOT (native terminal
- *   paste must keep falling through), mac super alias for ctrl combos
+ *   paste must keep falling through), Cmd (super) alias for ctrl combos
+ *   on every host platform
  * - overrides: setKeymapOverrides remaps live and drops invalid entries
  *   (a cordis.yml typo must never disable a built-in)
  * - reserved: fixed editor combos stay reserved and the effective action
@@ -57,6 +58,7 @@ import {
   resetKeymapOverrides,
   setKeymapOverrides,
 } from '../lib/types/utils/keymap.js'
+import { isMod } from '../lib/types/utils/modifiers.js'
 import { findText, settle, settled, sleep, viewportLines } from './lib/term-test.mjs'
 
 let failed = 0
@@ -86,14 +88,18 @@ check('default trajectory matches ctrl+t', actionMatches('trajectory', 't', { ct
 check('default history matches ctrl+r', actionMatches('history', 'r', { ctrl: true }))
 check('default undo matches ctrl+z', actionMatches('undo', 'z', { ctrl: true }))
 check('undo display string', effectiveComboString('undo') === 'ctrl+z', effectiveComboString('undo'))
-// macOS primary-modifier polarity, asserted on Linux via the platformAlias
-// seam: ordinary ctrl combos still alias to Cmd, `undo` (exactPrimary) must
-// not — Cmd+Z belongs to whatever the rest of macOS gives it.
-check('mac alias: ctrl+v paste also matches super+v', actionMatches('paste', 'v', { super: true }, true))
-check('mac alias: a remapped editor combo matches super+g', actionMatches('editor', 'g', { super: true }, true))
-check('mac alias: super+z does NOT match undo (exactPrimary)', !actionMatches('undo', 'z', { super: true }, true))
-check('mac alias: ctrl+z still matches undo', actionMatches('undo', 'z', { ctrl: true }, true))
-check('no alias on linux: super+v does NOT match paste', !actionMatches('paste', 'v', { super: true }, false))
+// Primary-modifier polarity: ordinary ctrl combos alias to Cmd (kitty
+// `super`), `undo` (exactPrimary) must not — Cmd+Z belongs to whatever the
+// rest of macOS gives it. The alias holds on EVERY host platform: the Mac
+// keyboard may drive a Linux dsh-tui (Orca serve, ssh), and super only
+// arrives through the kitty protocol anyway. The default (no seam argument)
+// is what production uses, so it is asserted directly on this CI host.
+check('alias: ctrl+v paste also matches super+v', actionMatches('paste', 'v', { super: true }))
+check('alias: a remapped editor combo matches super+g', actionMatches('editor', 'g', { super: true }))
+check('alias: super+z does NOT match undo (exactPrimary)', !actionMatches('undo', 'z', { super: true }))
+check('alias: ctrl+z still matches undo', actionMatches('undo', 'z', { ctrl: true }))
+check('alias seam off: super+v does NOT match paste', !actionMatches('paste', 'v', { super: true }, false))
+check('isMod: super counts as the primary modifier', isMod({ super: true }) && isMod({ ctrl: true }) && !isMod({}))
 check('default paste display string', effectiveComboString('paste') === 'ctrl+v, alt+v', effectiveComboString('paste'))
 
 // ---- overrides ------------------------------------------------------------
@@ -316,6 +322,21 @@ check('plain v types', await settled(() => promptText() === 'v'), JSON.stringify
 // Ctrl+C clears the non-empty prompt (idle single press).
 stdin.write('\x03')
 check('ctrl+c clears the prompt', await settled(() => promptText() === ''), JSON.stringify(promptText()))
+
+// Kitty keyboard terminals (Orca's xterm.js, flags=1) deliver Ctrl+C as
+// CSI 99;5u, not the raw \x03 byte: it must take the same Chat branch.
+stdin.write('k')
+await settle(() => promptText() === 'k')
+stdin.write('\x1b[99;5u')
+check('kitty ctrl+c (CSI 99;5u) clears the prompt', await settled(() => promptText() === ''), JSON.stringify(promptText()))
+
+// Cmd+A arrives as kitty super (CSI 97;9u) and must hit the same Chat
+// action as Ctrl+A on any host platform, without typing an 'a'.
+stdin.write('\x1b[97;9u')
+check('kitty cmd+a (super) opens the subagent dashboard', await settled(() => /Subagent Dashboard|子代理面板/.test(screen())))
+stdin.write('\x1b')
+await settle(() => !/Subagent Dashboard|子代理面板/.test(screen()))
+check('kitty cmd+a typed nothing into the prompt', promptText() === '', JSON.stringify(promptText()))
 
 // Listener order (#1155). Nothing has remounted the composer yet, so this
 // is the first-mount order: Chat must still own Ctrl+E / Ctrl+A. The caret
