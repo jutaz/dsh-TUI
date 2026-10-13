@@ -22,6 +22,8 @@
  *   F. startSelection/clearSelection 重置指纹与 stale；
  *   G. stale 拒绝后 getSelectedText 仍可读（守卫在提交层，不在读取层）；
  *   H. 几何变化（拖选 motion/键盘平移/多击）自动重基线，不判 stale；
+ *      H3：已锁存后用户再改几何（拖离跳动的 spinner 行）解除锁存；
+ *      H4：协调帧（follow 平移）的几何变化不解除锁存；
  *   I. 列区间与 getSelectedText 一致：选区列之外的流式追加不误伤；
  *   J. softWrap 位翻转（复制结果从两行变拼接）在 cell 不变时也锁存；
  *   K. 代际池重建（charPool 换新 + migrateScreenPools，即 Ink.resetPools）
@@ -42,7 +44,7 @@ export {} // 模块边界：避免顶层 await/全局名与其他 verify 脚本�
 process.env['SSH_CONNECTION'] = 'headless-test'
 delete process.env['TMUX']
 
-const { refreshSelectionFingerprint, getSelectedText, startSelection, updateSelection, clearSelection, selectionBounds } =
+const { refreshSelectionFingerprint, getSelectedText, startSelection, updateSelection, clearSelection, selectionBounds, shiftSelectionForFollow } =
   await import('../src/ink/selection.js')
 const { CharPool, HyperlinkPool, StylePool, createScreen, migrateScreenPools } =
   await import('../src/ink/screen.js')
@@ -240,6 +242,44 @@ function putRaw(s: Screen, col: number, row: number, charId: number, width: numb
   putText(screen, 0, 2, 'w')
   const relapse = refreshSelectionFingerprint(sel, screen, false)
   check('H2. guard re-arms after re-baseline', relapse && sel.stale)
+}
+
+// ── H3. 拖选途经跳动行锁存后，用户再改几何 → 解除锁存 ─────────────────────
+// 拖选中光标在 spinner/计时器行上停一帧就会锁存 stale；用户随后拖离、
+// 在静止文本上松手，复制的是新范围的当前文本，不应被拒绝。
+{
+  const screen = makeScreen(5, 10)
+  const sel = makeSel()
+  startSelection(sel, 0, 1)
+  updateSelection(sel, 9, 2)
+  putText(screen, 0, 2, '⠋')
+  refreshSelectionFingerprint(sel, screen, false)
+  putText(screen, 0, 2, '⠙') // spinner 帧在高亮下跳动
+  const tripped = refreshSelectionFingerprint(sel, screen, false)
+  updateSelection(sel, 9, 1) // 拖回只覆盖静止的第 1 行
+  const released = refreshSelectionFingerprint(sel, screen, false)
+  check('H3. user geometry change after a latch clears stale',
+    tripped && !released && !sel.stale)
+  putText(screen, 0, 1, 'x')
+  const relapse = refreshSelectionFingerprint(sel, screen, false)
+  check('H3b. guard re-arms on the new band', relapse && sel.stale)
+}
+
+// ── H4. 协调帧的几何平移不解除锁存 ─────────────────────────────────────────
+// follow/resize 平移同样改变几何键，但那是内容随滚动移动，不是用户重选：
+// 已锁存的替换必须保持拒绝。
+{
+  const screen = makeScreen(5, 10)
+  const sel = makeSel()
+  startSelection(sel, 0, 2)
+  updateSelection(sel, 9, 2)
+  putText(screen, 0, 2, 'a')
+  refreshSelectionFingerprint(sel, screen, false)
+  putText(screen, 0, 2, 'b')
+  const tripped = refreshSelectionFingerprint(sel, screen, false)
+  shiftSelectionForFollow(sel, -1, 0, 4) // 流式 follow 上移一行
+  refreshSelectionFingerprint(sel, screen, true)
+  check('H4. coordinated geometry shift keeps the latch', tripped && sel.stale)
 }
 
 // ── J. softWrap 翻转改变复制结果 → 指纹必须感知 ─────────────────────────

@@ -1387,7 +1387,6 @@ export function refreshSelectionFingerprint(
   screen: Screen,
   coordinated: boolean,
 ): boolean {
-  if (s.stale) return false
   const b = selectionBounds(s)
   if (!b) {
     s.coveredFingerprint = null
@@ -1398,13 +1397,21 @@ export function refreshSelectionFingerprint(
   // Any geometry change re-baselines: drag motion, word/line extension,
   // keyboard pan, multi-click — the user redefined what is highlighted, so
   // the next copy legitimately reads the new band's CURRENT text. Only a
-  // stationary highlight can go stale.
+  // stationary highlight can go stale. That includes clearing an earlier
+  // latch: a drag that grazes a ticking spinner/timer row for one frame and
+  // then moves off it must not refuse the copy on release. A coordinated
+  // frame (follow/resize shift) also moves the geometry key, but that is the
+  // content scrolling, not the user re-selecting, so its latch stands.
   const geometry = `${b.start.row}:${b.start.col}-${b.end.row}:${b.end.col}`
   if (geometry !== s.coveredGeometry) {
+    if (!coordinated) {
+      s.stale = false
+    }
     s.coveredGeometry = geometry
     s.coveredFingerprint = null
     s.coveredText = null
   }
+  if (s.stale) return false
   const { cells, noSelect, width, height, charPool, softWrap } = screen
   const copyRegion = screen.copyRegion
   const copyTexts = screen.copyTexts
